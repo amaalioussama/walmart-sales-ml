@@ -18,13 +18,14 @@ logger = get_logger(__name__)
 
 def load_raw_data(
     file_path: Union[str, Path],
-    store_id: Optional[int] = None
+    store_id: Optional[int] = None,
+    store_list: Optional[list] = None
 ) -> pd.DataFrame:
     """
     Load the raw Walmart sales data from CSV.
     
     This function loads the Walmart dataset and optionally filters
-    it for a specific store. It also performs basic validation.
+    it for specific store(s). It also performs basic validation.
     
     Parameters
     ----------
@@ -33,6 +34,9 @@ def load_raw_data(
     store_id : int, optional
         If provided, filters data for this specific store.
         If None, returns data for all stores.
+    store_list : list, optional
+        If provided, filters data for these specific stores.
+        Overrides store_id if both are provided.
     
     Returns
     -------
@@ -81,13 +85,21 @@ def load_raw_data(
             f"Available columns: {list(df.columns)}"
         )
     
-    # Filter for specific store if requested
-    if store_id is not None:
+    # Filter for specific store(s) if requested
+    if store_list is not None:
+        df = df[df["Store"].isin(store_list)].copy()
+        logger.info(f"Filtered data for Stores {store_list}: {len(df):,} rows")
+        
+        if len(df) == 0:
+            raise ValueError(f"No data found for Stores {store_list}")
+    elif store_id is not None:
         df = df[df["Store"] == store_id].copy()
         logger.info(f"Filtered data for Store {store_id}: {len(df):,} rows")
         
         if len(df) == 0:
             raise ValueError(f"No data found for Store {store_id}")
+    else:
+        logger.info(f"Loaded data for all stores: {df['Store'].nunique()} stores")
     
     # Convert Date column to datetime
     df["Date"] = pd.to_datetime(df["Date"])
